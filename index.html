@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last Harvest</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="scene" width="320" height="180"></canvas>
+
+<div class="side leftSide">
+  <div class="box">
+    <h1>Last Harvest</h1>
+    <div class="tagline">The last farmer. The last chance.</div>
+  </div>
+
+  <div class="box">
+    <div class="line"><span class="tag" id="tagFood"></span><b id="food">12</b></div>
+    <div class="line"><span class="tag" id="tagWater"></span><b id="water">8</b></div>
+    <div class="line"><span class="tag" id="tagSeeds"></span><b id="seeds">6</b></div>
+    <div class="line"><span class="tag" id="tagHealth"></span><b id="health">42%</b></div>
+    <div class="toolbelt" id="toolbelt"></div>
+  </div>
+
+  <div class="box">
+    <div class="line"><span class="tag" id="tagDays"></span><b id="daysLeft">30</b></div>
+    <div class="line"><span class="tag">◐ Time</span><b id="timeName">Dawn</b></div>
+    <div class="line"><span class="tag">☁ Weather</span><b id="weatherName">Clear</b></div>
+  </div>
+
+  <div class="box storyBox">
+    The soil is tired.<br>
+    The sun is hotter.<br>
+    You are the last farmer<br>
+    on this planet.<br>
+    Every harvest costs something.
+  </div>
+</div>
+
+<div class="fieldWrap">
+  <div class="field" id="field"></div>
+</div>
+
+<div class="side rightSide">
+  <div class="box">
+    <h2>Today's Choices</h2>
+    <div id="choices"></div>
+  </div>
+</div>
+
+<div class="bottomBar">
+  <b id="prompt">What will you harvest today?</b>
+  <small id="promptSub">More food now... less tomorrow.</small>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<div class="cover" id="menu">
+  <h1>LAST HARVEST</h1>
+  <div class="tagline">The last farmer. The last chance.</div>
+  <div class="menuRow">
+    <button class="bigBtn dark" onclick="toggleRules()">How to Play</button>
+    <button class="bigBtn" onclick="startGame()">Start</button>
+  </div>
+  <div class="rules" id="rules">
+    <h3>HOW TO PLAY</h3>
+    <p>You get 30 days on a dying planet. Try to survive all of them without the land dying.</p>
+    <p><b>Click a plot</b> to choose it. Empty = plant something. Growing = water it. Ready = harvest it.</p>
+    <p>Harvesting feeds you but always hurts the land. Resting and composting heal it back.</p>
+    <p>Every day costs 1 food and 1 water no matter what. Watch the weather - rain waters everything free, heatwaves dry crops twice as fast.</p>
+    <p>A crop that goes 3 days without water dies. Clearing a dead plot is free.</p>
+  </div>
+</div>
+
+<div class="cover hide" id="endScreen">
+  <div class="endCard">
+    <h2 id="endTitle"></h2>
+    <p id="endText"></p>
+    <div class="bigBtn" onclick="restart()">Play Again</div>
+   </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
