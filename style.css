@@ -210,3 +210,44 @@ h2 { margin: 0 0 7px; font-size: clamp(12px, 1.3vw, 15px); color: #f4ead9; }
   .bottomBar { order: 3; }
   .rightSide { order: 4; }
 }
+
+.logList {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.log {
+  padding: 3px 0px;
+  border-bottom: 1px solid black;
+  color: #af9fbe;
+  animation: logIn 0.3s ease;
+}
+
+.log:last-child {
+  border-bottom: none;
+}
+
+.logEntry .d {
+  color: #7d88a3; margin-right: 5px;
+}
+.logEntry.good {
+  color: #9fb88a;
+}
+.logEntry.bad {
+  color: #d9564a;
+}
+.logEntry.warn {
+  color: #e8b84a;
+}
+
+@keyframes logIn {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+}

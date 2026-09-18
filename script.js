@@ -138,11 +138,12 @@ function resetGame() {
   game = {
     day: 1, lastDay: 30,
     food: 12, water: 8, seeds: 6, health: 42,
-    weather: 0, harvests: 0,
+    weather: Math.max(Math.floor(Math.random()*4-0.0000000001),3), harvests: 0,
     has: { plow: false, windmill: false, compost: false },
     plots: newPlots(),
     picked: null,
-    over: false
+    over: false,
+    logs: []
   };
 }
 resetGame();
@@ -194,6 +195,7 @@ function clearPlot(i) {
   game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Cleared the dead plot.");
+  addLog(`Cleared dead plot ${i+1}`);
   draw();
 }
 
@@ -204,6 +206,7 @@ function plantCrop(i, key) {
   game.plots[i] = { crop: key, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Planted " + c.label + ".");
+  addLog(`Planted ${c.label} in plot ${i+1}.`);
   nextDay(i);
 }
 
@@ -213,6 +216,7 @@ function waterPlot(i) {
   game.plots[i].thirsty = 0;
   game.picked = null;
   flash("Watered the plot.");
+  addLog(`Watered plot ${i+1}.`)
   nextDay(i);
 }
 
@@ -227,6 +231,7 @@ function harvestPlot(i) {
   game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Harvested " + c.label + "! +" + c.food + " food.");
+  addLog(`Harvested ${c.label}! + ${c.food} food.`);
   nextDay(null);
 }
 
@@ -234,6 +239,7 @@ function restField() {
   var heal = game.has.compost ? 8 : 4;
   game.health = keepBetween(game.health + heal, 0, 100);
   flash("You let the field rest.");
+  addLog("You let the field rest.");
   nextDay(null);
 }
 
@@ -242,6 +248,7 @@ function collectWater() {
   game.water += amount;
   game.health = keepBetween(game.health - 2, 0, 100);
   flash("Got " + amount + " water from the well.");
+  addLog(`Got ${amount} water from the well.`)
   nextDay(null);
 }
 
@@ -250,6 +257,7 @@ function tradeForSeeds() {
   game.food -= 3;
   game.seeds += 2;
   flash("Traded 3 food for 2 seeds.");
+  addLog("Traded 3 food for 2 seeds.");
   nextDay(null);
 }
 
@@ -264,11 +272,20 @@ function buildTool(key) {
   game.seeds -= t.costSeeds;
   game.has[key] = true;
   flash("Built the " + t.label + "!");
+  addLog(`Built the ${t.label}!`);
   draw();
 }
 
 function nextDay(plotWeJustTouched) {
   var w = weathers[game.weather];
+
+  addLog(w.name, w.name === "Rain" ? "good" : w.name === "Heatwave" ? "bad" : "");
+  if (w.drift < 0){
+    addLog("The land lost " + Math.abs(w.drift) + "% health.", "bad");
+  }
+  else if(w.drift > 0){
+    addLog("The land recovered " + w.drift + "% health.", "good");
+  }
 
   game.food = keepBetween(game.food - 1, 0, 999);
   game.water = keepBetween(game.water - 1, 0, 999);
@@ -288,8 +305,13 @@ function nextDay(plotWeJustTouched) {
 
     p.grown += 1;
 
-    if (p.thirsty >= 3) p.dead = true;
-    else if (p.grown >= crops[p.crop].days) p.ready = true;
+    if (p.thirsty >= 3) {
+      p.dead = true;
+      addLog("Plot " + (i + 1) + " withered away.", "bad");
+    } else if (p.grown >= crops[p.crop].days) {
+      p.ready = true;
+      addLog(crops[p.crop].label + " in plot " + (i + 1) + " is ready.", "good");
+    }
   }
 
   game.day += 1;
@@ -616,11 +638,32 @@ function loop(t) {
 requestAnimationFrame(loop);
 
 function toggleRules() { get("rules").classList.toggle("open"); }
-function startGame() { get("menu").classList.add("hide"); }
+function startGame(){
+  get("menu").classList.add("hide"); 
+  addLog("Day 1. The soil is tired.", "warn");
+}
 function restart() {
   resetGame();
   get("endScreen").classList.add("hide");
+  addLog("Day 1. The soil is tired.", "warn");
   draw();
 }
 
 draw();
+
+function addLog(text, type){
+  game.logs.push({day: game.day, text: text, type: type ? type : ""});
+  drawLog();
+}
+
+function drawLog(){
+  var html = ``
+  for (var i = game.log.length - 1 ; i >= 0; i--){
+    html += `
+      <div class="log ${game.log[i].type}">
+        <span class="d">D ${game.log[i].day}</span> ${game.log[i].text}
+      </div>
+    `
+  }
+  get("logs").innerHTML = html
+}
