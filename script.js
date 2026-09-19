@@ -151,7 +151,8 @@ var gradientMid = 50;
 var gradientMax = 150;
 
 function hexToRGB(hex){
-  hex = hex.replace(/^#/, '');
+  console.log(hex, typeof hex)
+  hex = hex.substring(1);
   return {
     r : parseInt(hex.substring(0,2),16),
     g : parseInt(hex.substring(2,4),16),
@@ -181,7 +182,7 @@ function sampleGradient(sky, slot, idx, health) {
   if (slot == "bands" || slot == "soil"){
     var neutralPalette;
     if (slot == "bands" && sky){
-      neutralPalette = getSkyColors(sky);
+      neutralPalette = getSkyColors(sky)[slot][idx];
     }
     else{
       neutralPalette = colorAnchors.neutral[slot][idx];
@@ -314,17 +315,43 @@ var game;
 function newPlots() {
   var list = [];
   for (var i = 0; i < 9; i++) {
-    list.push({ crop: null, lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: false });
+    list.push({ crop: null, lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: false, soilBonus: 0 });
   }
-  list[0] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[1] = { crop: "wheat",   lastCrop: null, grown: 3, thirsty: 0, ready: true,  dead: false };
-  list[2] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[3] = { crop: null,      lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: true  };
-  list[4] = { crop: "greens",  lastCrop: null, grown: 1, thirsty: 1, ready: false, dead: false };
-  list[6] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[7] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[8] = { crop: "berries", lastCrop: null, grown: 3, thirsty: 1, ready: false, dead: false };
+  list[0] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[1] = { crop: "wheat",   lastCrop: null, grown: 3, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[2] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[3] = { crop: null,      lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: true,  soilBonus: 0 };
+  list[4] = { crop: "greens",  lastCrop: null, grown: 1, thirsty: 1, ready: false, dead: false, soilBonus: 0 };
+  list[6] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[7] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[8] = { crop: "berries", lastCrop: null, grown: 3, thirsty: 1, ready: false, dead: false, soilBonus: 0 };
   return list;
+}
+
+function getNeighbors (plotIdx) {
+  var row = Math.floor(plotIdx / 3);
+  var column = plotIdx % 3;
+  var result = [];
+  if (row > 0) result.push((row - 1) * 3 + column);
+  if (row < 2) result.push((row + 1) * 3 + column);
+  if (column > 0) result.push((row * 3) + (column - 1));
+  if (column < 2) result.push((row * 3) + (column + 1));
+
+  return result
+}
+
+function calcSoilBonus(plotIdx) {
+  var result = 0;
+  var neighbors = getNeighbors(plotIdx);
+
+  for (var neighbor of neighbors) {
+    var plot = game.plots[neighbor];
+    if (!plot.crop || p.dead) continue;
+    if (plot.crop == "cactus") result += 1;
+    if (plot.crop == "corn" || plot.crop == "pumpkin") result -= 1;
+  }
+
+  return result;
 }
 
 function resetGame() {
@@ -518,6 +545,9 @@ function nextDay(plotWeJustTouched) {
 
   for (var i = 0; i < game.plots.length; i++) {
     var p = game.plots[i];
+
+    p.soilBonus = keepBetween(p.soilBonus + calcSoilBonus(i),-5,5);
+
     if (!p.crop || p.dead || p.ready) continue;
 
     if (i === plotWeJustTouched || w.waters) {
@@ -525,6 +555,10 @@ function nextDay(plotWeJustTouched) {
     } else {
       var dry = w.dryRate;
       if (crops[p.crop].tough) dry = Math.ceil(dry / 2);
+
+      if (p.soilBonus > 0) dry = Math.max(0, dry - 1);
+      if (p.soilBonus < 0) dry += 1;
+
       p.thirsty += dry;
     }
 
@@ -595,6 +629,9 @@ function drawField() {
     else if (p.ready) classes += " ready";
     else if (p.crop && p.thirsty >= 2) classes += " warn";
     if (game.picked === i) classes += " picked";
+    if (p.soilBonus > 0) classes += " fertile";
+    if (p.soilBonus < 0) classes += " depleted";
+
     html += '<div class="' + classes + '" onclick="pickPlot(' + i + ')">' + plotInside(p) + '</div>';
   }
   get("field").innerHTML = html;
