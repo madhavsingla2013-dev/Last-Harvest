@@ -197,6 +197,7 @@ function clearPlot(i) {
   flash("Cleared the dead plot.");
   addLog(`Cleared dead plot ${i+1}`);
   draw();
+  saveGame();
 }
 
 function plantCrop(i, key) {
@@ -274,6 +275,7 @@ function buildTool(key) {
   flash("Built the " + t.label + "!");
   addLog(`Built the ${t.label}!`);
   draw();
+  saveGame();
 }
 
 function nextDay(plotWeJustTouched) {
@@ -324,6 +326,7 @@ function nextDay(plotWeJustTouched) {
 
   draw();
   checkIfOver();
+  saveGame();
 }
 
 function checkIfOver() {
@@ -348,6 +351,7 @@ function checkIfOver() {
   }
 
   game.over = true;
+  clearSave();
   var finalDay = Math.min(game.day, game.lastDay);
   var points = (finalDay * 5) + (game.health * 3) + (game.harvests * 10) + game.food;
   get("endTitle").textContent = title;
@@ -642,10 +646,12 @@ requestAnimationFrame(loop);
 
 function toggleRules() { get("rules").classList.toggle("open"); }
 function startGame(){
+  clearSave();
   get("menu").classList.add("hide"); 
   addLog("Day 1. The soil is tired.", "warn");
 }
 function restart() {
+  clearSave();
   resetGame();
   get("endScreen").classList.add("hide");
   addLog("Day 1. The soil is tired.", "warn");
@@ -669,4 +675,64 @@ function drawLog(){
     `
   }
   get("logs").innerHTML = html
+}
+
+var saveKey = "v1"
+
+function saveGame(){
+  if (!game || game.over){
+    return;
+  }
+  else {
+    try {
+      game.saveTime = Date.now();
+      localStorage.setItem(saveKey, JSON.stringify(game));
+    }
+    catch(e){
+      console.warn("cannot save game "+e);
+    }
+  }
+}
+
+function loadSave(){
+  try {
+    var jsonData = localStorage.getItem(saveKey);
+    if (!jsonData){
+      return 0;
+    }
+    var parsedData = JSON.parse(jsonData); 
+
+    return parsedData;
+  }
+  catch(e){
+    console.warn("cannot load game "+e);
+    return -1;
+  }
+}
+
+function clearSave() {
+  localStorage.removeItem(saveKey);
+}
+
+function hasSave() {
+  return localStorage.getItem(saveKey) ? true : false
+}
+
+function continueGame(){
+  var data = loadSave();
+  if (!data){
+    flash("no save found!");
+    return;
+  }
+  game = data;
+  get("menu").classList.add("hide");
+  addLog("Resumed on day " + game.day + ".", "warn");
+  draw();
+}
+
+if (!hasSave()){
+  get("continuebtn").classList.add("hide");
+}
+else {
+  get("continuebtn").classList.remove("hide");
 }
