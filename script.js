@@ -138,7 +138,7 @@ function resetGame() {
   game = {
     day: 1, lastDay: 30,
     food: 12, water: 8, seeds: 6, health: 42,
-    weather: Math.max(Math.floor(Math.random()*4-0.0000000001),3), harvests: 0,
+    weather: Math.max(0,Math.min(Math.floor(Math.random()*4-0.0000000001)),3), harvests: 0,
     has: { plow: false, windmill: false, compost: false },
     plots: newPlots(),
     picked: null,
@@ -459,6 +459,10 @@ function drawChoices() {
   }
 
   get("choices").innerHTML = html;
+  var firstBtn = get("choices").querySelector(".choice:not(:disabled)");
+  if (firstBtn){
+    firstBtn.classList.add("primary");
+  }
 }
 
 function drawPrompt() {
@@ -647,7 +651,9 @@ requestAnimationFrame(loop);
 function toggleRules() { get("rules").classList.toggle("open"); }
 function startGame(){
   clearSave();
+  resetGame();
   get("menu").classList.add("hide"); 
+  draw();
   addLog("Day 1. The soil is tired.", "warn");
 }
 function restart() {
@@ -667,10 +673,10 @@ function addLog(text, type){
 
 function drawLog(){
   var html = ``
-  for (var i = game.log.length - 1 ; i >= 0; i--){
+  for (var i = game.logs.length - 1 ; i >= 0; i--){
     html += `
-      <div class="log ${game.log[i].type}">
-        <span class="d">D ${game.log[i].day}</span> ${game.log[i].text}
+      <div class="log ${game.logs[i].type}">
+        <span class="d">D ${game.logs[i].day}</span> ${game.logs[i].text}
       </div>
     `
   }
@@ -698,7 +704,7 @@ function loadSave(){
   try {
     var jsonData = localStorage.getItem(saveKey);
     if (!jsonData){
-      return 0;
+      return null;
     }
     var parsedData = JSON.parse(jsonData); 
 
@@ -706,7 +712,7 @@ function loadSave(){
   }
   catch(e){
     console.warn("cannot load game "+e);
-    return -1;
+    return null;
   }
 }
 
@@ -736,3 +742,92 @@ if (!hasSave()){
 else {
   get("continuebtn").classList.remove("hide");
 }
+
+function firstEnabledChoice(){
+  var btns = document.querySelectorAll("#choices .choice");
+  for (var btn of btns){
+    if (!btn.disabled){
+      return btn;
+    }
+  }
+  return null;
+}
+
+function handleKey(e){
+  if (game.over){
+    return;
+  }
+  if (!get("menu").classList.contains("hide")){
+    return;
+  }
+
+  var key = e.key.toLowerCase();
+
+  if (key == "h"){
+    toggleHelp();
+    e.preventDefault();
+    return;
+  }
+
+  
+
+  if (key == "escape"){
+    if (!get("helpScreen").classList.contains("hide")){
+      toggleHelp();
+      e.preventDefault();
+      return;
+    }
+    if (game.picked !== null){
+      game.picked = null;
+      draw();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (!get("helpScreen").classList.contains("hide")){
+    return;
+  }
+
+  if (key >= "1" && key <= "9"){
+    var idx = parseInt(key)-1;
+    if (idx >= 0 && idx < game.plots.length) {
+      pickPlot(idx);
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (key === "enter" || key === " ") {
+    var btn = firstEnabledChoice();
+    if (btn) {
+      btn.click();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (!game.picked){
+    if (key == "w"){
+      collectWater();
+      e.preventDefault();
+      return;
+    }
+    if (key == "r"){
+      restField();
+      e.preventDefault();
+      return;
+    }
+    if (key == "t"){
+      tradeForSeeds();
+      e.preventDefault();
+      return;
+    }
+  }
+}
+
+function toggleHelp(){
+  get("helpScreen").classList.toggle("hide");
+}
+
+document.addEventListener("keydown", handleKey)

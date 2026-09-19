@@ -277,3 +277,8 @@ h2 { margin: 0 0 9px; font-size: clamp(12px, 1.3vw, 15px); color: #f4ead9; font-
     transform: translateX(0px);
   }
 }
+
+.choice.primary {
+  border-left: 3px solid #e8b84a;
+  padding-left: 7px;
+}
