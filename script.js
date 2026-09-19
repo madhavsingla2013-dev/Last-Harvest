@@ -116,6 +116,38 @@ var weathers = [
   { name: "Dust",     note: "Dust storm. The wind strips the soil.",   dryRate: 1, drift: -2 }
 ];
 
+var difficulties = {
+  easy: {
+    title: "easy",
+    subtitle: "the land is kind, forecast stations are accurate",
+    startFood: 15, startWater: 10, startSeeds: 8, startHealth: 50,
+    landDrift: 1,
+    damageMult: 0.6,
+    forecastAccuracy: 0.75,
+    supplyConsumption: 1
+  },
+  normal: {
+    title: "normal",
+    subtitle: "the land is tired, the intended experience",
+    startFood: 12, startWater: 8, startSeeds: 6, startHealth: 42,
+    landDrift: 0,
+    damageMult: 1,
+    forecastAccuracy: 0.5,
+    supplyConsumption: 1
+  },
+  hard: {
+    title: "hardcore",
+    subtitle: "the land is cruel, forecasts are wildly inaccurate, YOU WILL NOT SURVIVE",
+    startFood: 10, startWater: 6, startSeeds: 4, startHealth: 35,
+    landDrift: -1,
+    damageMult: 1.4,
+    forecastAccuracy: 0.3,
+    supplyConsumption: 2
+  }
+}
+
+var currentDifficulty = "normal"
+
 var game;
 
 function newPlots() {
@@ -135,16 +167,24 @@ function newPlots() {
 }
 
 function resetGame() {
+  var gamePreset = difficulties[currentDifficulty];
+
   game = {
     day: 1, lastDay: 30,
-    food: 12, water: 8, seeds: 6, health: 42,
+    food: gamePreset.startFood, water: gamePreset.startWater, seeds: gamePreset.startSeeds, health: gamePreset.startHealth,
     weather: Math.max(0,Math.min(Math.floor(Math.random()*4-0.0000000001)),3), harvests: 0,
+    nextWeather: null,
+    forecast: null,
     has: { plow: false, windmill: false, compost: false },
     plots: newPlots(),
     picked: null,
     over: false,
-    logs: []
+    logs: [],
+    difficulty: currentDifficulty
   };
+  
+  game.nextWeather = getNextWeather();
+  game.forecast = forecast(game.nextWeather);
 }
 resetGame();
 
@@ -171,16 +211,12 @@ function availableCrops() {
   return out;
 }
 
-function harvestDamage(cropKey) {
-  var base = crops[cropKey].damage;
-  if (game.has.plow) base = base * 0.6;
-  return Math.round(base);
-}
 
 function RotationDamage(plot,cropKey){
   var base = crops[cropKey].damage;
   if (game.has.plow) base = base * 0.6;
   if (plot.lastCrop === cropKey) base = base * 1.6;
+  base = base * difficulties[currentDifficulty].damageMult;
   return Math.round(base);
 }
 
@@ -241,7 +277,7 @@ function harvestPlot(i) {
   game.food += c.food;
   game.water += c.water;
   game.seeds += c.seedBack;
-  game.health = keepBetween(game.health - harvestDamage(p.crop), 0, 100);
+  game.health = keepBetween(game.health - RotationDamage(p.crop), 0, 100);
   game.harvests += 1;
   game.plots[i] = { crop: null, lastCrop: harvestedCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
@@ -293,19 +329,25 @@ function buildTool(key) {
 }
 
 function nextDay(plotWeJustTouched) {
+
+  game.weather = game.nextWeather;
+
   var w = weathers[game.weather];
+  var d = difficulties[currentDifficulty];
 
   addLog(w.name, w.name === "Rain" ? "good" : w.name === "Heatwave" ? "bad" : "");
-  if (w.drift < 0){
-    addLog("The land lost " + Math.abs(w.drift) + "% health.", "bad");
+  if (w.drift + d.landDrift < 0){
+    addLog("The land lost " + Math.abs(w.drift + d.landDrift) + "% health.", "bad");
   }
-  else if(w.drift > 0){
-    addLog("The land recovered " + w.drift + "% health.", "good");
+  else if(w.drift + d.landDrift > 0){
+    addLog("The land recovered " + (w.drift + d.landDrift) + "% health.", "good");
   }
 
-  game.food = keepBetween(game.food - 1, 0, 999);
-  game.water = keepBetween(game.water - 1, 0, 999);
-  game.health = keepBetween(game.health + w.drift, 0, 100);
+  
+
+  game.food = keepBetween(game.food - d.supplyConsumption, 0, 999);
+  game.water = keepBetween(game.water - d.supplyConsumption, 0, 999);
+  game.health = keepBetween(game.health + w.drift + d.landDrift, 0, 100);
 
   for (var i = 0; i < game.plots.length; i++) {
     var p = game.plots[i];
@@ -332,11 +374,8 @@ function nextDay(plotWeJustTouched) {
 
   game.day += 1;
 
-  var roll = Math.random();
-  if (roll < 0.45) game.weather = 0;
-  else if (roll < 0.65) game.weather = 1;
-  else if (roll < 0.85) game.weather = 2;
-  else game.weather = 3;
+  game.nextWeather = getNextWeather();
+  game.forecast = forecast(game.nextWeather);
 
   draw();
   checkIfOver();
@@ -469,7 +508,7 @@ function drawChoices() {
       if (c3.seedBack) gain2 += ", +" + c3.seedBack + " seeds";
       gain2 += ")";
       html += choiceRow("harvestPlot(" + i + ")", c3.art, "Harvest " + c3.label,
-                        gain2, "-" + harvestDamage(p.crop) + "% land health");
+                        gain2, "-" + RotationDamage(p.crop) + "% land health");
     }
   }
 
@@ -477,6 +516,26 @@ function drawChoices() {
   var firstBtn = get("choices").querySelector(".choice:not(:disabled)");
   if (firstBtn){
     firstBtn.classList.add("primary");
+  }
+}
+
+function drawDifficultySelector() {
+  var html = "";
+  for (var key in difficulties){
+    var d = difficulties[key];
+    var active = key === currentDifficulty ? "active" : "";
+    html += `<button class="difficultyBtn ${active}" data-key="${key}">${d.title}</button>`
+  }
+
+  get("difficultyRow").innerHTML = html;
+  get("difficultySubtitle").textContent = difficulties[currentDifficulty].subtitle;
+
+  var btns = get("difficultyRow").querySelectorAll(".difficultyBtn");
+  for (var btn of btns){
+    btn.addEventListener("click", function () {
+      currentDifficulty = this.getAttribute("data-key");
+      drawDifficultySelector();
+    })
   }
 }
 
@@ -503,6 +562,7 @@ function draw() {
   get("daysLeft").textContent = Math.max(0, game.lastDay - game.day + 1);
   get("timeName").textContent = timeNames[(game.day - 1) % 4];
   get("weatherName").textContent = weathers[game.weather].name;
+  get("nextWeatherName").textContent = weathers[game.forecast].name + "?";
 
   var belt = "";
   for (var key in tools) {
@@ -680,6 +740,7 @@ function restart() {
 }
 
 draw();
+drawDifficultySelector();
 
 function addLog(text, type){
   game.logs.push({day: game.day, text: text, type: type ? type : ""});
@@ -845,4 +906,34 @@ function toggleHelp(){
   get("helpScreen").classList.toggle("hide");
 }
 
-document.addEventListener("keydown", handleKey)
+document.addEventListener("keydown", handleKey);
+
+function getNextWeather(){
+  var roll = Math.random();
+  if (roll < 0.45) {
+    return 0;
+  }
+  if (roll < 0.65){
+    return 1;
+  }
+  if (roll < 0.85){
+    return 2;
+  }
+  return 3;
+}
+
+function forecast(nextWeather) {
+  var roll = Math.random();
+  var forecastAccuracy = difficulties[currentDifficulty].forecastAccuracy;
+  if (roll < forecastAccuracy){
+    return nextWeather
+  }
+  else {
+    while(true){
+      var guess = Math.max(0,Math.min(Math.floor(Math.random()*4)),3);
+      if (guess != nextWeather){
+        return guess;
+      }
+    }
+  }
+}

@@ -282,3 +282,46 @@ h2 { margin: 0 0 9px; font-size: clamp(12px, 1.3vw, 15px); color: #f4ead9; font-
   border-left: 3px solid #e8b84a;
   padding-left: 7px;
 }
+
+.difficultySelect {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.difficultyLabel {
+  color: #8f9ec5;
+  margin-bottom: 8px;
+}
+
+.difficultyRow {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  justify-content: center;
+}
+
+.difficultyBtn {
+  padding: 8px 16px;
+  background: rgba(16, 16, 32, 0.9);
+  color: #bba4db;
+  border: 1px solid rgba(140, 140, 190, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.difficultyBtn:hover {
+  color: #fff9ef;
+  border-color: rgba(140, 140, 190, 0.6);
+}
+
+.difficultyBtn.active {
+  background: #f0b734;
+  color: #302014;
+  border-color: #be901b;
+}
+
+.difficultySubtitle {
+  margin-top: 10px;
+  color: #bba4db;
+}
