@@ -116,6 +116,106 @@ var weathers = [
   { name: "Dust",     note: "Dust storm. The wind strips the soil.",   dryRate: 1, drift: -2 }
 ];
 
+var colorAnchors = {
+  dead: {
+    bands: ["#2f160e", "#52210a", "#812913", "#a12e12", "#bb481"],
+    sun: "#c05439",
+    glow: "#791e11",
+    soil: ["#513c2f", "#503526", "#241810", "#1a1008"]
+  },
+  neutral: {
+    bands: ["#2a1b3d", "#6b2f5e", "#c2483f", "#e8763a", "#f2a24e"],
+    sun: "#ffe6a8",
+    glow: "#ff9d4a",
+    soil: ["#6b4530", "#5c3a28", "#472c20", "#301d16"]
+  },
+  thriving: {
+    bands: ["#2c5690", "#8db1c9", "#d0dce2", "#9fc9d9", "#d4e8f0"],
+    sun: "#fffbe8",
+    glow: "#fff8a8",
+    soil: ["#b9805b", "#9995d3d", "#7e563e", "#663f2e"]
+  }
+};
+
+function getSkyColors(sky){
+  return {
+    bands: sky.bands,
+    sun: sky.sun,
+    glow: sky.glow,
+    soil: colorAnchors.neutral.soil
+  }
+}
+
+var gradientMin = -50;
+var gradientMid = 50;
+var gradientMax = 150;
+
+function hexToRGB(hex){
+  hex = hex.replace(/^#/, '');
+  return {
+    r : parseInt(hex.substring(0,2),16),
+    g : parseInt(hex.substring(2,4),16),
+    b : parseInt(hex.substring(4,6),16)
+  }
+}
+
+function RGBToHex (rgb){
+  function h(n) {
+    var s = Math.round(Math.max(0, Math.min(255, n))).toString(16);
+    return s.length === 1 ? "0" + s : s;
+  }
+  return "#" + h(rgb.r) + h(rgb.g) + h(rgb.b);
+}
+
+function lerpColor(start, end, progress) {
+  var startRGB = hexToRGB(start);
+  var endRGB = hexToRGB(end);
+  return RGBToHex({
+    r: (startRGB.r + (endRGB.r - startRGB.r) * progress),
+    g: (startRGB.g + (endRGB.g - startRGB.g) * progress),
+    b: (startRGB.b + (endRGB.b - startRGB.b) * progress)
+  })
+}
+
+function sampleGradient(sky, slot, idx, health) {
+  if (slot == "bands" || slot == "soil"){
+    var neutralPalette;
+    if (slot == "bands" && sky){
+      neutralPalette = getSkyColors(sky);
+    }
+    else{
+      neutralPalette = colorAnchors.neutral[slot][idx];
+    }
+    if (health <= gradientMid){
+      var progress = (health - gradientMin)/(gradientMid - gradientMin);
+      return lerpColor(colorAnchors.dead[slot][idx], neutralPalette, progress);
+    }
+    else {
+      var progress = (health - gradientMax)/(gradientMax - gradientMid);
+      return lerpColor(neutralPalette, colorAnchors.thriving[slot][idx],progress);
+    }
+  }
+  
+  else {
+    if ((slot == "sun" || slot == "glow") && sky){
+      neutralPalette = sky[slot];
+    }
+    else{
+      neutralPalette = colorAnchors.neutral[slot];
+    }
+    if (health <= gradientMid){
+      var progress = (health - gradientMin)/(gradientMid - gradientMin);
+      return lerpColor(colorAnchors.dead[slot], neutralPalette, progress);
+    }
+    else {
+      var progress = (health - gradientMax)/(gradientMax - gradientMid);
+      return lerpColor(neutralPalette, colorAnchors.thriving[slot],progress);
+    }
+  }
+  
+}
+
+
 var difficulties = {
   easy: {
     title: "easy",
@@ -144,7 +244,7 @@ var difficulties = {
     forecastAccuracy: 0.3,
     supplyConsumption: 2
   }
-}
+};
 
 var currentDifficulty = "normal"
 
@@ -662,9 +762,10 @@ function drawScene() {
   var weather = weathers[game.weather];
   var timeNow = timeNames[(game.day - 1) % 4];
 
+  var health = game.health;
   var stripe = 84 / sky.bands.length;
   for (var i = 0; i < sky.bands.length; i++) {
-    pen.fillStyle = sky.bands[i];
+    pen.fillStyle = sampleGradient(sky,"bands",i,health);
     pen.fillRect(0, i * stripe, W, stripe + 1);
   }
 
@@ -677,8 +778,8 @@ function drawScene() {
     }
   }
 
-  pixelBall(160, 82, 16, sky.glow);
-  pixelBall(160, 82, 12, sky.sun);
+  pixelBall(160, 82, 16, sampleGradient(sky, "glow", null, health));
+  pixelBall(160, 82, 12, sampleGradient(sky, "sun", null, health));
 
   pen.fillStyle = sky.stars ? "#241a3d" : "#8a3355";
   for (var cl = 0; cl < 12; cl++) {
@@ -696,10 +797,10 @@ function drawScene() {
     pen.fillRect(tx, 88 - th, tw, th);
   }
 
-  pen.fillStyle = "#6b4530"; pen.fillRect(0, 88, W, 26);
-  pen.fillStyle = "#5c3a28"; pen.fillRect(0, 114, W, 26);
-  pen.fillStyle = "#472c20"; pen.fillRect(0, 140, W, 24);
-  pen.fillStyle = "#301d16"; pen.fillRect(0, 164, W, H - 164);
+  pen.fillStyle = sampleGradient(null, "soil", 0, health); pen.fillRect(0, 88, W, 26);
+  pen.fillStyle = sampleGradient(null, "soil", 1, health); pen.fillRect(0, 114, W, 26);
+  pen.fillStyle = sampleGradient(null, "soil", 2, health); pen.fillRect(0, 140, W, 24);
+  pen.fillStyle = sampleGradient(null, "soil", 3, health); pen.fillRect(0, 164, W, H - 164);
 
   pen.fillStyle = "#3d2419";
   for (var k = 0; k < 34; k++) {
