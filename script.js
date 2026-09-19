@@ -348,11 +348,12 @@ function checkIfOver() {
   }
 
   game.over = true;
-  var points = (game.day * 5) + (game.health * 3) + (game.harvests * 10) + game.food;
+  var finalDay = Math.min(game.day, game.lastDay);
+  var points = (finalDay * 5) + (game.health * 3) + (game.harvests * 10) + game.food;
   get("endTitle").textContent = title;
   get("endText").textContent = text;
   get("endPoints").textContent = "Score: " + points +
-    "  (day " + Math.min(game.day, game.lastDay) + ", " + game.health + "% land, " + game.harvests + " harvests)";
+    "  (day " + finalDay + ", " + game.health + "% land, " + game.harvests + " harvests)";
   get("endScreen").classList.remove("hide");
 }
 
@@ -373,6 +374,8 @@ function drawField() {
     var p = game.plots[i];
     var classes = "plot";
     if (p.dead) classes += " dead";
+    else if (p.ready) classes += " ready";
+    else if (p.crop && p.thirsty >= 2) classes += " warn";
     if (game.picked === i) classes += " picked";
     html += '<div class="' + classes + '" onclick="pickPlot(' + i + ')">' + plotInside(p) + '</div>';
   }
@@ -589,9 +592,9 @@ function drawScene() {
     pen.fillRect(wx + 1, wy - 10, 2, 24);
     pen.fillRect(wx - 12, wy + 1, 26, 2);
   } else {
-    for (var b = -9; b <= 9; b++) {
-      pen.fillRect(wx + 1 + b, wy + 2 + b, 1, 1);
-      pen.fillRect(wx + 1 + b, wy + 2 - b, 1, 1);
+    for (var b = -8; b <= 8; b += 2) {
+      pen.fillRect(wx + b, wy + 1 + b, 2, 2);
+      pen.fillRect(wx + b, wy + 3 - b, 2, 2);
     }
   }
 
