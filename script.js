@@ -148,6 +148,67 @@ var difficulties = {
 
 var currentDifficulty = "normal"
 
+var endings = {
+  landDeath: {
+    title: "The land is gone.",
+    text: "On day {day} the soil finally gave out. Nothing will grow here again, not for you, not for anyone.",
+    aftertext: "You stay after that, hoping that the soil will come back again, but nothing grows."
+  },
+  starvation: {
+    title:"There is no food left",
+    text: "You reached day {day} but hunger got you, you starve to death, the field is still green but you are not.",
+    aftertext: "After you die of starvation, another farmer finds your land and claims it, but he can not maintain it, the land is left to rot after you."
+  },
+  drought: {
+    title: "The water is gone.",
+    text: "You reached day {day} but thirst got you, before you die, you see the last drop drying up from the scorching sun.",
+    aftertext: "After you die of thirst, your land is destined to die from thirst too."
+  },
+  survivedScarred: {
+    title: "Day 30, The last harvest.",
+    text: "You survived, but at what cost, there is nothing left, the soil is depleted, the sun is scorching hot, and you became weak",
+    aftertext: "After the 30 days you just survived, you must survive the next month too"
+  },
+  survivedStable: {
+    title: "Day 30, The last harvest.",
+    text: "You made it, the land is scarred but still recovering",
+    aftertext: "Your field could survive until spring, but you do not know who will give out first, You, or The field"
+  },
+  survivedThriving: {
+    title: "Day 30, the last harvest.",
+    text: "You made it, the land is now better than you found it, it is now thriving",
+    aftertext: "after alot of work, your field survives to spring, the land is thriving and now makes alot of goods, but there is still another Fall after that spring ends."
+  }
+}
+
+var difficultyEnding = {
+  easy: "\n\nYou did this with the land's help. It was kind to you. You should remember that.",
+  normal: "",
+  hard: "\n\nYou did this on hardcore, with a dying world and lying forecasts. No one will know. You will."
+}
+
+function pickEnding(){
+  if (game.health <= 0){
+    return "landDeath";
+  }
+  if (game.food <= 0){
+    return "starvation";
+  }
+  if (game.water <= 0){
+    return "drought";
+  }
+  if (game.day > game.lastDay){
+    if (game.health >= 60){
+      return "survivedThriving";
+    }
+    if (game.health >= 25){
+      return "survivedStable";
+    }
+    return "survivedScarred";
+  }
+  return null;
+}
+
 var game;
 
 function newPlots() {
@@ -389,34 +450,27 @@ function nextDay(plotWeJustTouched) {
 }
 
 function checkIfOver() {
-  var title = "", text = "";
-
-  if (game.health <= 0) {
-    title = "The land is gone.";
-    text = "On day " + game.day + " the soil finally gave out. Nothing will grow here again.";
-  } else if (game.food <= 0) {
-    title = "There is no food left.";
-    text = "You made it to day " + game.day + ", but hunger got there first.";
-  } else if (game.water <= 0) {
-    title = "The water is gone.";
-    text = "Day " + game.day + ". The last drop dried up under that hot sun.";
-  } else if (game.day > game.lastDay) {
-    title = "Day 30 - The Last Harvest.";
-    if (game.health >= 50) text = "You made it, and you left the land better than you found it.";
-    else if (game.health >= 20) text = "You made it, barely. The land is scarred but still alive.";
-    else text = "You survived, but there is almost nothing left. Was it worth it?";
-  } else {
+  var key = pickEnding();
+  if (!key) {
     return;
   }
 
   game.over = true;
   clearSave();
+
+  var ending = endings[key];
+
+  var text = ending.text.replace("{day}",game.day);
+  var afterText = ending.afterText + difficultyEnding[game.difficulty];
+
   var finalDay = Math.min(game.day, game.lastDay);
   var points = (finalDay * 5) + (game.health * 3) + (game.harvests * 10) + game.food;
-  get("endTitle").textContent = title;
+
+  get("endTitle").textContent = ending.title;
   get("endText").textContent = text;
+  get("endAfterText").textContent = afterText;
   get("endPoints").textContent = "Score: " + points +
-    "  (day " + finalDay + ", " + game.health + "% land, " + game.harvests + " harvests)";
+    "  (day " + finalDay + ", " + game.health + "% land, " + game.harvests + " harvests) in " + difficulties[currentDifficulty].title;
   get("endScreen").classList.remove("hide");
 }
 
