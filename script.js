@@ -121,16 +121,16 @@ var game;
 function newPlots() {
   var list = [];
   for (var i = 0; i < 9; i++) {
-    list.push({ crop: null, grown: 0, thirsty: 0, ready: false, dead: false });
+    list.push({ crop: null, lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: false });
   }
-  list[0] = { crop: "greens",  grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[1] = { crop: "wheat",   grown: 3, thirsty: 0, ready: true,  dead: false };
-  list[2] = { crop: "berries", grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[3] = { crop: null,      grown: 0, thirsty: 0, ready: false, dead: true  };
-  list[4] = { crop: "greens",  grown: 1, thirsty: 1, ready: false, dead: false };
-  list[6] = { crop: "berries", grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[7] = { crop: "greens",  grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[8] = { crop: "berries", grown: 3, thirsty: 1, ready: false, dead: false };
+  list[0] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false };
+  list[1] = { crop: "wheat",   lastCrop: null, grown: 3, thirsty: 0, ready: true,  dead: false };
+  list[2] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false };
+  list[3] = { crop: null,      lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: true  };
+  list[4] = { crop: "greens",  lastCrop: null, grown: 1, thirsty: 1, ready: false, dead: false };
+  list[6] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false };
+  list[7] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false };
+  list[8] = { crop: "berries", lastCrop: null, grown: 3, thirsty: 1, ready: false, dead: false };
   return list;
 }
 
@@ -177,6 +177,19 @@ function harvestDamage(cropKey) {
   return Math.round(base);
 }
 
+function RotationDamage(plot,cropKey){
+  var base = crops[cropKey].damage;
+  if (game.has.plow) base = base * 0.6;
+  if (plot.lastCrop === cropKey) base = base * 1.6;
+  return Math.round(base);
+}
+
+function growthRate(plot, cropKey){
+  var base = crops[cropKey].days;
+  if (plot.lastCrop === cropKey) base = base + 1;
+  return base;
+}
+
 function countReady() {
   var n = 0;
   for (var i = 0; i < game.plots.length; i++) {
@@ -192,7 +205,7 @@ function pickPlot(i) {
 }
 
 function clearPlot(i) {
-  game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: null, lastCrop: game.plots[i].lastCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Cleared the dead plot.");
   addLog(`Cleared dead plot ${i+1}`);
@@ -224,12 +237,13 @@ function waterPlot(i) {
 function harvestPlot(i) {
   var p = game.plots[i];
   var c = crops[p.crop];
+  var harvestedCrop = crops[p.lastCrop];
   game.food += c.food;
   game.water += c.water;
   game.seeds += c.seedBack;
   game.health = keepBetween(game.health - harvestDamage(p.crop), 0, 100);
   game.harvests += 1;
-  game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: null, lastCrop: harvestedCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Harvested " + c.label + "! +" + c.food + " food.");
   addLog(`Harvested ${c.label}! + ${c.food} food.`);
@@ -310,7 +324,7 @@ function nextDay(plotWeJustTouched) {
     if (p.thirsty >= 3) {
       p.dead = true;
       addLog("Plot " + (i + 1) + " withered away.", "bad");
-    } else if (p.grown >= crops[p.crop].days) {
+    } else if (p.grown >= growthRate(p,p.crop)) {
       p.ready = true;
       addLog(crops[p.crop].label + " in plot " + (i + 1) + " is ready.", "good");
     }
@@ -365,7 +379,8 @@ function plotInside(p) {
   if (p.dead) return cropArt.dead;
   if (!p.crop) return "";
   var c = crops[p.crop];
-  var size = p.ready ? 1 : keepBetween(p.grown / c.days, 0.3, 0.92);
+  var growthDays = growthRate(p,p.crop)
+  var size = p.ready ? 1 : keepBetween(p.grown / growthDays, 0.3, 0.92);
   var picture = (size < 0.45 && !p.ready) ? cropArt.sprout : c.art;
   var faded = (p.thirsty >= 2 && !p.ready) ? "opacity:.5;" : "";
   return '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;' +
