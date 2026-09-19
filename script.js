@@ -252,11 +252,17 @@ function clearPlot(i) {
 function plantCrop(i, key) {
   var c = crops[key];
   if (game.seeds < c.seedCost) { flash("Not enough seeds."); return; }
+
+
   game.seeds -= c.seedCost;
-  game.plots[i] = { crop: key, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: key, lastCrop: game.plots[i].lastCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
+  var isRepeat = game.plots[i].crop === game.plots[i].lastCrop;
   flash("Planted " + c.label + ".");
-  addLog(`Planted ${c.label} in plot ${i+1}.`);
+  addLog(isRepeat
+    ? `Replanted ${c.label} in plot ${i+1}. The soil is tired.`
+    : `Planted ${c.label} in plot ${i+1}.`,
+    isRepeat ? "warn" : "");
   nextDay(i);
 }
 
@@ -273,11 +279,11 @@ function waterPlot(i) {
 function harvestPlot(i) {
   var p = game.plots[i];
   var c = crops[p.crop];
-  var harvestedCrop = crops[p.lastCrop];
+  var harvestedCrop = p.crop;
   game.food += c.food;
   game.water += c.water;
   game.seeds += c.seedBack;
-  game.health = keepBetween(game.health - RotationDamage(p.crop), 0, 100);
+  game.health = keepBetween(game.health - RotationDamage(p, p.crop), 0, 100);
   game.harvests += 1;
   game.plots[i] = { crop: null, lastCrop: harvestedCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
@@ -508,7 +514,7 @@ function drawChoices() {
       if (c3.seedBack) gain2 += ", +" + c3.seedBack + " seeds";
       gain2 += ")";
       html += choiceRow("harvestPlot(" + i + ")", c3.art, "Harvest " + c3.label,
-                        gain2, "-" + RotationDamage(p.crop) + "% land health");
+                        gain2, "-" + RotationDamage(p, p.crop) + "% land health");
     }
   }
 
@@ -807,6 +813,7 @@ function continueGame(){
     return;
   }
   game = data;
+  currentDifficulty = game.difficulty;
   get("menu").classList.add("hide");
   addLog("Resumed on day " + game.day + ".", "warn");
   draw();
