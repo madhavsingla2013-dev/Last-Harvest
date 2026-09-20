@@ -632,9 +632,50 @@ function drawField() {
     if (p.soilBonus > 0) classes += " fertile";
     if (p.soilBonus < 0) classes += " depleted";
 
-    html += '<div class="' + classes + '" onclick="pickPlot(' + i + ')">' + plotInside(p) + '</div>';
+    var toolTip = plotToolTip(p, i);
+    html += `<div class="${classes}" onclick="pickPlot(${i})" title=${toolTip}>${plotInside(p)}</div>`;
   }
   get("field").innerHTML = html;
+}
+
+function plotToolTip(p, i) {
+  var result = [];
+
+  result.push(`Plot ${i+1}`);
+
+  if (p.dead) {
+    result.push("Dead");
+    if (p.lastCrop) {
+      result.push(`Last grown: ${crops[p.lastCrop].title} , planting it again gives debuffs`);
+    }
+    result.push("Click to clear");
+  }
+  else if (!p.crop){
+    result.push("Empty");
+    if (p.lastCrop) {
+      result.push(`Last grown: ${crops[p.lastCrop].title} , planting it again gives debuffs`);
+    }
+    result.push("Click to plant");
+  }
+  else {
+    result.push(`${crops[p.crop].label} growth: ${p.grown}/${growthRate(p,p.crop)}`);
+
+    if (p.ready) {
+      result.push("Click to harvest");
+    }
+    else {
+      result.push(`Water: ${3 - p.thirsty}`);
+    }
+
+    if (p.soilBonus > 0) {
+      result.push(`Soil is fertile (+ ${p.soilBonus} )`);
+    }
+    else if (p.soilBonus < 0) {
+      result.push(`Soil is depleted ( ${p.soilBonus} )`);
+    }
+  }
+
+  return result.join("\n");
 }
 
 function choiceRow(call, art, label, plus, minus, disabled) {
@@ -763,13 +804,40 @@ function draw() {
 
   var belt = "";
   for (var key in tools) {
-    belt += '<span class="' + (game.has[key] ? "have" : "") + '" title="' + tools[key].label + '">' + tools[key].pic + "</span>";
+    belt += '<span class="' + (game.has[key] ? "have" : "") + '" title="' + toolToolTip(key) + '">' + tools[key].pic + "</span>";
   }
   get("toolbelt").innerHTML = belt;
 
   drawField();
   drawChoices();
   drawPrompt();
+}
+
+function toolToolTip(key) {
+  var result = [];
+
+  result.push(tools[key].title);
+
+  if (game.has(key)) {
+    result.push("Built");
+    result.push(tools[key].info);
+  }
+  else {
+    result.push(tools[key].info);
+    result.push(`Cost: ${tools[key].costFood} Food, ${tools[key].costSeeds} Seeds`);
+
+    if (tools[key].costFood > game.food) {
+      result.push("Not enought Food")
+    }
+    if (tools[key].costSeeds > game.seeds) {
+      result.push("Not enough Seeds");
+    }
+    if (tools[key].costFood <= game.food && tools[key].costSeeds <= game.seeds){
+      result.push("Click on the choice panel to build");
+    }
+  }
+
+  return result.join("\n");
 }
 
 var canvas = get("scene");
