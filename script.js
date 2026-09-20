@@ -151,7 +151,6 @@ var gradientMid = 50;
 var gradientMax = 150;
 
 function hexToRGB(hex){
-  console.log(hex, typeof hex)
   hex = hex.substring(1);
   return {
     r : parseInt(hex.substring(0,2),16),
@@ -253,32 +252,32 @@ var endings = {
   landDeath: {
     title: "The land is gone.",
     text: "On day {day} the soil finally gave out. Nothing will grow here again, not for you, not for anyone.",
-    aftertext: "You stay after that, hoping that the soil will come back again, but nothing grows."
+    afterText: "You stay after that, hoping that the soil will come back again, but nothing grows."
   },
   starvation: {
     title:"There is no food left",
     text: "You reached day {day} but hunger got you, you starve to death, the field is still green but you are not.",
-    aftertext: "After you die of starvation, another farmer finds your land and claims it, but he can not maintain it, the land is left to rot after you."
+    afterText: "After you die of starvation, another farmer finds your land and claims it, but he can not maintain it, the land is left to rot after you."
   },
   drought: {
     title: "The water is gone.",
     text: "You reached day {day} but thirst got you, before you die, you see the last drop drying up from the scorching sun.",
-    aftertext: "After you die of thirst, your land is destined to die from thirst too."
+    afterText: "After you die of thirst, your land is destined to die from thirst too."
   },
   survivedScarred: {
     title: "Day 30, The last harvest.",
     text: "You survived, but at what cost, there is nothing left, the soil is depleted, the sun is scorching hot, and you became weak",
-    aftertext: "After the 30 days you just survived, you must survive the next month too"
+    afterText: "After the 30 days you just survived, you must survive the next month too"
   },
   survivedStable: {
     title: "Day 30, The last harvest.",
     text: "You made it, the land is scarred but still recovering",
-    aftertext: "Your field could survive until spring, but you do not know who will give out first, You, or The field"
+    afterText: "Your field could survive until spring, but you do not know who will give out first, You, or The field"
   },
   survivedThriving: {
     title: "Day 30, the last harvest.",
     text: "You made it, the land is now better than you found it, it is now thriving",
-    aftertext: "after alot of work, your field survives to spring, the land is thriving and now makes alot of goods, but there is still another Fall after that spring ends."
+    afterText: "after alot of work, your field survives to spring, the land is thriving and now makes alot of goods, but there is still another Fall after that spring ends."
   }
 }
 
@@ -346,7 +345,7 @@ function calcSoilBonus(plotIdx) {
 
   for (var neighbor of neighbors) {
     var plot = game.plots[neighbor];
-    if (!plot.crop || p.dead) continue;
+    if (!plot.crop || plot.dead) continue;
     if (plot.crop == "cactus") result += 1;
     if (plot.crop == "corn" || plot.crop == "pumpkin") result -= 1;
   }
@@ -604,7 +603,7 @@ function checkIfOver() {
   get("endText").textContent = text;
   get("endAfterText").textContent = afterText;
   get("endPoints").textContent = "Score: " + points +
-    "  (day " + finalDay + ", " + game.health + "% land, " + game.harvests + " harvests) in " + difficulties[currentDifficulty].title;
+    "  (day " + finalDay + ", " + game.health + "% land health, " + game.harvests + " harvests) in " + difficulties[currentDifficulty].title + "mode";
   get("endScreen").classList.remove("hide");
 }
 
@@ -633,7 +632,7 @@ function drawField() {
     if (p.soilBonus < 0) classes += " depleted";
 
     var toolTip = plotToolTip(p, i);
-    html += `<div class="${classes}" onclick="pickPlot(${i})" title=${toolTip}>${plotInside(p)}</div>`;
+    html += `<div class="${classes}" onclick="pickPlot(${i})" title="${toolTip}">${plotInside(p)}</div>`;
   }
   get("field").innerHTML = html;
 }
@@ -818,7 +817,7 @@ function toolToolTip(key) {
 
   result.push(tools[key].title);
 
-  if (game.has(key)) {
+  if (game.has[key]) {
     result.push("Built");
     result.push(tools[key].info);
   }
@@ -975,7 +974,7 @@ function drawScene() {
   }
 
   if (weather.name === "Dust") {
-    pen.fillStyle = "rgba(180,130,80,0.16)";
+    pen.fillStyle = "rgba(180, 130, 80, 0.15)";
     pen.fillRect(0, 0, W, H);
   }
 }
@@ -1018,7 +1017,7 @@ function drawLog(){
   for (var i = game.logs.length - 1 ; i >= 0; i--){
     html += `
       <div class="log ${game.logs[i].type}">
-        <span class="d">D ${game.logs[i].day}</span> ${game.logs[i].text}
+        <span class="d">${game.logs[i].day}</span> ${game.logs[i].text}
       </div>
     `
   }

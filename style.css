@@ -6,8 +6,8 @@
 html, body {
   margin: 0;
   height: 100%;
-  background: #14101d;
-  color: #e8dcc9;
+  background: #14111c;
+  color: #e8dccc;
   font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
   overflow: hidden;
 }
@@ -33,13 +33,24 @@ html, body {
   font-size: clamp(10px, .92vw, 12px);
 }
 
-.leftSide  { left: 14px;  width: clamp(175px, 18vw, 235px); }
+.leftSide {
+  left: 15px;
+  width: clamp(175px, 18vw, 235px);
+}
 
-.rightSide { right: 14px; width: clamp(195px, 20vw, 258px); }
+.rightSide {
+  right: 15px;
+  width: clamp(195px, 20vw, 258px);
+}
 
-.side::-webkit-scrollbar { width: 5px; }
+.side::-webkit-scrollbar {
+  width: 5px;
+}
 
-.side::-webkit-scrollbar-thumb { background: #4a5571; border-radius: 3px; }
+.side::-webkit-scrollbar-thumb {
+  background: #4c5577;
+  border-radius: 5px;
+}
 
 .box {
   flex-shrink: 0;
@@ -47,27 +58,31 @@ html, body {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(140, 155, 190, 0.3);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 10px;
+  padding: 14px 15px;
 }
 
 h1 {
   margin: 0;
   font-size: clamp(19px, 2vw, 25px);
   font-weight: 700;
-  letter-spacing: .3px;
-  color: #f6efe0;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.3px;
+  color: #f6f0df;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
 }
 
 .tagline {
-  color: #aa9bb1; margin-top: 5px; font-size: 0.93em;
+  color: #ab9cb1;
+  margin-top: 5px;
+  font-size: 0.93em;
 }
 
 h2 {
   margin: 0px 0px 10px;
   font-size: clamp(12px, 1.3vw, 15px);
-  color: #faeada; font-weight: 600; letter-spacing: 0.2px;
+  color: #faeada;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .storyBox {
@@ -81,7 +96,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 7px 0;
+  padding: 7px 0px;
   border-bottom: 1px solid rgba(140, 155, 190, 0.15);
 }
 
@@ -93,11 +108,11 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #b8adc4;
+  color: #b7acc5;
 }
 
 .line b {
-  color: #f4eedd;
+  color: #f5eedd;
   white-space: nowrap;
   font-weight: 600;
 }
@@ -133,13 +148,14 @@ h2 {
   background: none;
   border: 0;
   border-bottom: 1px solid rgba(140, 155, 190, 0.15);
-  border-radius: 6px;
+  border-radius: 5px;
   padding: 10px 5px;
   font: inherit;
-  color: #e8dcc9;
+  color: #eadcca;
   cursor: pointer;
   transition: background 0.1s;
 }
+
 .choice:last-child {
   border-bottom: 0;
 }
@@ -170,12 +186,12 @@ h2 {
 }
 
 .choice .label {
-  color: #f4eada;
+  color: #f5eada;
 }
 
 .choice .plus {
   display: block;
-  color: #9fb88b;
+  color: #9fb88c;
   margin-top: 2px;
   font-size: 0.9em;
 }
@@ -189,7 +205,7 @@ h2 {
 
 .groupLabel {
   margin: 10px 0 5px;
-  color: #7d88a4;
+  color: #7d88a5;
   font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 1.2px;
