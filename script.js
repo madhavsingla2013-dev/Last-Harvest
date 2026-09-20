@@ -116,34 +116,262 @@ var weathers = [
   { name: "Dust",     note: "Dust storm. The wind strips the soil.",   dryRate: 1, drift: -2 }
 ];
 
+var colorAnchors = {
+  dead: {
+    bands: ["#2f160e", "#52210a", "#812913", "#a12e12", "#bb481"],
+    sun: "#c05439",
+    glow: "#791e11",
+    soil: ["#513c2f", "#503526", "#241810", "#1a1008"]
+  },
+  neutral: {
+    bands: ["#2a1b3d", "#6b2f5e", "#c2483f", "#e8763a", "#f2a24e"],
+    sun: "#ffe6a8",
+    glow: "#ff9d4a",
+    soil: ["#6b4530", "#5c3a28", "#472c20", "#301d16"]
+  },
+  thriving: {
+    bands: ["#2c5690", "#8db1c9", "#d0dce2", "#9fc9d9", "#d4e8f0"],
+    sun: "#fffbe8",
+    glow: "#fff8a8",
+    soil: ["#b9805b", "#9995d3d", "#7e563e", "#663f2e"]
+  }
+};
+
+function getSkyColors(sky){
+  return {
+    bands: sky.bands,
+    sun: sky.sun,
+    glow: sky.glow,
+    soil: colorAnchors.neutral.soil
+  }
+}
+
+var gradientMin = -50;
+var gradientMid = 50;
+var gradientMax = 150;
+
+function hexToRGB(hex){
+  hex = hex.substring(1);
+  return {
+    r : parseInt(hex.substring(0,2),16),
+    g : parseInt(hex.substring(2,4),16),
+    b : parseInt(hex.substring(4,6),16)
+  }
+}
+
+function RGBToHex (rgb){
+  function h(n) {
+    var s = Math.round(Math.max(0, Math.min(255, n))).toString(16);
+    return s.length === 1 ? "0" + s : s;
+  }
+  return "#" + h(rgb.r) + h(rgb.g) + h(rgb.b);
+}
+
+function lerpColor(start, end, progress) {
+  var startRGB = hexToRGB(start);
+  var endRGB = hexToRGB(end);
+  return RGBToHex({
+    r: (startRGB.r + (endRGB.r - startRGB.r) * progress),
+    g: (startRGB.g + (endRGB.g - startRGB.g) * progress),
+    b: (startRGB.b + (endRGB.b - startRGB.b) * progress)
+  })
+}
+
+function sampleGradient(sky, slot, idx, health) {
+  if (slot == "bands" || slot == "soil"){
+    var neutralPalette;
+    if (slot == "bands" && sky){
+      neutralPalette = getSkyColors(sky)[slot][idx];
+    }
+    else{
+      neutralPalette = colorAnchors.neutral[slot][idx];
+    }
+    if (health <= gradientMid){
+      var progress = (health - gradientMin)/(gradientMid - gradientMin);
+      return lerpColor(colorAnchors.dead[slot][idx], neutralPalette, progress);
+    }
+    else {
+      var progress = (health - gradientMax)/(gradientMax - gradientMid);
+      return lerpColor(neutralPalette, colorAnchors.thriving[slot][idx],progress);
+    }
+  }
+  
+  else {
+    if ((slot == "sun" || slot == "glow") && sky){
+      neutralPalette = sky[slot];
+    }
+    else{
+      neutralPalette = colorAnchors.neutral[slot];
+    }
+    if (health <= gradientMid){
+      var progress = (health - gradientMin)/(gradientMid - gradientMin);
+      return lerpColor(colorAnchors.dead[slot], neutralPalette, progress);
+    }
+    else {
+      var progress = (health - gradientMax)/(gradientMax - gradientMid);
+      return lerpColor(neutralPalette, colorAnchors.thriving[slot],progress);
+    }
+  }
+  
+}
+
+
+var difficulties = {
+  easy: {
+    title: "easy",
+    subtitle: "the land is kind, forecast stations are accurate",
+    startFood: 15, startWater: 10, startSeeds: 8, startHealth: 50,
+    landDrift: 1,
+    damageMult: 0.6,
+    forecastAccuracy: 0.75,
+    supplyConsumption: 1
+  },
+  normal: {
+    title: "normal",
+    subtitle: "the land is tired, the intended experience",
+    startFood: 12, startWater: 8, startSeeds: 6, startHealth: 42,
+    landDrift: 0,
+    damageMult: 1,
+    forecastAccuracy: 0.5,
+    supplyConsumption: 1
+  },
+  hard: {
+    title: "hardcore",
+    subtitle: "the land is cruel, forecasts are wildly inaccurate, YOU WILL NOT SURVIVE",
+    startFood: 10, startWater: 6, startSeeds: 4, startHealth: 35,
+    landDrift: -1,
+    damageMult: 1.4,
+    forecastAccuracy: 0.3,
+    supplyConsumption: 2
+  }
+};
+
+var currentDifficulty = "normal"
+
+var endings = {
+  landDeath: {
+    title: "The land is gone.",
+    text: "On day {day} the soil finally gave out. Nothing will grow here again, not for you, not for anyone.",
+    afterText: "You stay after that, hoping that the soil will come back again, but nothing grows."
+  },
+  starvation: {
+    title:"There is no food left",
+    text: "You reached day {day} but hunger got you, you starve to death, the field is still green but you are not.",
+    afterText: "After you die of starvation, another farmer finds your land and claims it, but he can not maintain it, the land is left to rot after you."
+  },
+  drought: {
+    title: "The water is gone.",
+    text: "You reached day {day} but thirst got you, before you die, you see the last drop drying up from the scorching sun.",
+    afterText: "After you die of thirst, your land is destined to die from thirst too."
+  },
+  survivedScarred: {
+    title: "Day 30, The last harvest.",
+    text: "You survived, but at what cost, there is nothing left, the soil is depleted, the sun is scorching hot, and you became weak",
+    afterText: "After the 30 days you just survived, you must survive the next month too"
+  },
+  survivedStable: {
+    title: "Day 30, The last harvest.",
+    text: "You made it, the land is scarred but still recovering",
+    afterText: "Your field could survive until spring, but you do not know who will give out first, You, or The field"
+  },
+  survivedThriving: {
+    title: "Day 30, the last harvest.",
+    text: "You made it, the land is now better than you found it, it is now thriving",
+    afterText: "after alot of work, your field survives to spring, the land is thriving and now makes alot of goods, but there is still another Fall after that spring ends."
+  }
+}
+
+var difficultyEnding = {
+  easy: "\n\nYou did this with the land's help. It was kind to you. You should remember that.",
+  normal: "",
+  hard: "\n\nYou did this on hardcore, with a dying world and lying forecasts. No one will know. You will."
+}
+
+function pickEnding(){
+  if (game.health <= 0){
+    return "landDeath";
+  }
+  if (game.food <= 0){
+    return "starvation";
+  }
+  if (game.water <= 0){
+    return "drought";
+  }
+  if (game.day > game.lastDay){
+    if (game.health >= 60){
+      return "survivedThriving";
+    }
+    if (game.health >= 25){
+      return "survivedStable";
+    }
+    return "survivedScarred";
+  }
+  return null;
+}
+
 var game;
 
 function newPlots() {
   var list = [];
   for (var i = 0; i < 9; i++) {
-    list.push({ crop: null, grown: 0, thirsty: 0, ready: false, dead: false });
+    list.push({ crop: null, lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: false, soilBonus: 0 });
   }
-  list[0] = { crop: "greens",  grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[1] = { crop: "wheat",   grown: 3, thirsty: 0, ready: true,  dead: false };
-  list[2] = { crop: "berries", grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[3] = { crop: null,      grown: 0, thirsty: 0, ready: false, dead: true  };
-  list[4] = { crop: "greens",  grown: 1, thirsty: 1, ready: false, dead: false };
-  list[6] = { crop: "berries", grown: 4, thirsty: 0, ready: true,  dead: false };
-  list[7] = { crop: "greens",  grown: 2, thirsty: 0, ready: true,  dead: false };
-  list[8] = { crop: "berries", grown: 3, thirsty: 1, ready: false, dead: false };
+  list[0] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[1] = { crop: "wheat",   lastCrop: null, grown: 3, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[2] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[3] = { crop: null,      lastCrop: null, grown: 0, thirsty: 0, ready: false, dead: true,  soilBonus: 0 };
+  list[4] = { crop: "greens",  lastCrop: null, grown: 1, thirsty: 1, ready: false, dead: false, soilBonus: 0 };
+  list[6] = { crop: "berries", lastCrop: null, grown: 4, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[7] = { crop: "greens",  lastCrop: null, grown: 2, thirsty: 0, ready: true,  dead: false, soilBonus: 0 };
+  list[8] = { crop: "berries", lastCrop: null, grown: 3, thirsty: 1, ready: false, dead: false, soilBonus: 0 };
   return list;
 }
 
+function getNeighbors (plotIdx) {
+  var row = Math.floor(plotIdx / 3);
+  var column = plotIdx % 3;
+  var result = [];
+  if (row > 0) result.push((row - 1) * 3 + column);
+  if (row < 2) result.push((row + 1) * 3 + column);
+  if (column > 0) result.push((row * 3) + (column - 1));
+  if (column < 2) result.push((row * 3) + (column + 1));
+
+  return result
+}
+
+function calcSoilBonus(plotIdx) {
+  var result = 0;
+  var neighbors = getNeighbors(plotIdx);
+
+  for (var neighbor of neighbors) {
+    var plot = game.plots[neighbor];
+    if (!plot.crop || plot.dead) continue;
+    if (plot.crop == "cactus") result += 1;
+    if (plot.crop == "corn" || plot.crop == "pumpkin") result -= 1;
+  }
+
+  return result;
+}
+
 function resetGame() {
+  var gamePreset = difficulties[currentDifficulty];
+
   game = {
     day: 1, lastDay: 30,
-    food: 12, water: 8, seeds: 6, health: 42,
-    weather: 0, harvests: 0,
+    food: gamePreset.startFood, water: gamePreset.startWater, seeds: gamePreset.startSeeds, health: gamePreset.startHealth,
+    weather: Math.max(0,Math.min(Math.floor(Math.random()*4-0.0000000001)),3), harvests: 0,
+    nextWeather: null,
+    forecast: null,
     has: { plow: false, windmill: false, compost: false },
     plots: newPlots(),
     picked: null,
-    over: false
+    over: false,
+    logs: [],
+    difficulty: currentDifficulty
   };
+  
+  game.nextWeather = getNextWeather();
+  game.forecast = forecast(game.nextWeather);
 }
 resetGame();
 
@@ -170,10 +398,19 @@ function availableCrops() {
   return out;
 }
 
-function harvestDamage(cropKey) {
+
+function RotationDamage(plot,cropKey){
   var base = crops[cropKey].damage;
   if (game.has.plow) base = base * 0.6;
+  if (plot.lastCrop === cropKey) base = base * 1.6;
+  base = base * difficulties[currentDifficulty].damageMult;
   return Math.round(base);
+}
+
+function growthRate(plot, cropKey){
+  var base = crops[cropKey].days;
+  if (plot.lastCrop === cropKey) base = base + 1;
+  return base;
 }
 
 function countReady() {
@@ -191,19 +428,28 @@ function pickPlot(i) {
 }
 
 function clearPlot(i) {
-  game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: null, lastCrop: game.plots[i].lastCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Cleared the dead plot.");
+  addLog(`Cleared dead plot ${i+1}`);
   draw();
+  saveGame();
 }
 
 function plantCrop(i, key) {
   var c = crops[key];
   if (game.seeds < c.seedCost) { flash("Not enough seeds."); return; }
+
+
   game.seeds -= c.seedCost;
-  game.plots[i] = { crop: key, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: key, lastCrop: game.plots[i].lastCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
+  var isRepeat = game.plots[i].crop === game.plots[i].lastCrop;
   flash("Planted " + c.label + ".");
+  addLog(isRepeat
+    ? `Replanted ${c.label} in plot ${i+1}. The soil is tired.`
+    : `Planted ${c.label} in plot ${i+1}.`,
+    isRepeat ? "warn" : "");
   nextDay(i);
 }
 
@@ -213,20 +459,23 @@ function waterPlot(i) {
   game.plots[i].thirsty = 0;
   game.picked = null;
   flash("Watered the plot.");
+  addLog(`Watered plot ${i+1}.`)
   nextDay(i);
 }
 
 function harvestPlot(i) {
   var p = game.plots[i];
   var c = crops[p.crop];
+  var harvestedCrop = p.crop;
   game.food += c.food;
   game.water += c.water;
   game.seeds += c.seedBack;
-  game.health = keepBetween(game.health - harvestDamage(p.crop), 0, 100);
+  game.health = keepBetween(game.health - RotationDamage(p, p.crop), 0, 100);
   game.harvests += 1;
-  game.plots[i] = { crop: null, grown: 0, thirsty: 0, ready: false, dead: false };
+  game.plots[i] = { crop: null, lastCrop: harvestedCrop, grown: 0, thirsty: 0, ready: false, dead: false };
   game.picked = null;
   flash("Harvested " + c.label + "! +" + c.food + " food.");
+  addLog(`Harvested ${c.label}! + ${c.food} food.`);
   nextDay(null);
 }
 
@@ -234,6 +483,7 @@ function restField() {
   var heal = game.has.compost ? 8 : 4;
   game.health = keepBetween(game.health + heal, 0, 100);
   flash("You let the field rest.");
+  addLog("You let the field rest.");
   nextDay(null);
 }
 
@@ -242,6 +492,7 @@ function collectWater() {
   game.water += amount;
   game.health = keepBetween(game.health - 2, 0, 100);
   flash("Got " + amount + " water from the well.");
+  addLog(`Got ${amount} water from the well.`)
   nextDay(null);
 }
 
@@ -250,6 +501,7 @@ function tradeForSeeds() {
   game.food -= 3;
   game.seeds += 2;
   flash("Traded 3 food for 2 seeds.");
+  addLog("Traded 3 food for 2 seeds.");
   nextDay(null);
 }
 
@@ -264,18 +516,37 @@ function buildTool(key) {
   game.seeds -= t.costSeeds;
   game.has[key] = true;
   flash("Built the " + t.label + "!");
+  addLog(`Built the ${t.label}!`);
   draw();
+  saveGame();
 }
 
 function nextDay(plotWeJustTouched) {
-  var w = weathers[game.weather];
 
-  game.food = keepBetween(game.food - 1, 0, 999);
-  game.water = keepBetween(game.water - 1, 0, 999);
-  game.health = keepBetween(game.health + w.drift, 0, 100);
+  game.weather = game.nextWeather;
+
+  var w = weathers[game.weather];
+  var d = difficulties[currentDifficulty];
+
+  addLog(w.name, w.name === "Rain" ? "good" : w.name === "Heatwave" ? "bad" : "");
+  if (w.drift + d.landDrift < 0){
+    addLog("The land lost " + Math.abs(w.drift + d.landDrift) + "% health.", "bad");
+  }
+  else if(w.drift + d.landDrift > 0){
+    addLog("The land recovered " + (w.drift + d.landDrift) + "% health.", "good");
+  }
+
+  
+
+  game.food = keepBetween(game.food - d.supplyConsumption, 0, 999);
+  game.water = keepBetween(game.water - d.supplyConsumption, 0, 999);
+  game.health = keepBetween(game.health + w.drift + d.landDrift, 0, 100);
 
   for (var i = 0; i < game.plots.length; i++) {
     var p = game.plots[i];
+
+    p.soilBonus = keepBetween(p.soilBonus + calcSoilBonus(i),-5,5);
+
     if (!p.crop || p.dead || p.ready) continue;
 
     if (i === plotWeJustTouched || w.waters) {
@@ -283,55 +554,56 @@ function nextDay(plotWeJustTouched) {
     } else {
       var dry = w.dryRate;
       if (crops[p.crop].tough) dry = Math.ceil(dry / 2);
+
+      if (p.soilBonus > 0) dry = Math.max(0, dry - 1);
+      if (p.soilBonus < 0) dry += 1;
+
       p.thirsty += dry;
     }
 
     p.grown += 1;
 
-    if (p.thirsty >= 3) p.dead = true;
-    else if (p.grown >= crops[p.crop].days) p.ready = true;
+    if (p.thirsty >= 3) {
+      p.dead = true;
+      addLog("Plot " + (i + 1) + " withered away.", "bad");
+    } else if (p.grown >= growthRate(p,p.crop)) {
+      p.ready = true;
+      addLog(crops[p.crop].label + " in plot " + (i + 1) + " is ready.", "good");
+    }
   }
 
   game.day += 1;
 
-  var roll = Math.random();
-  if (roll < 0.45) game.weather = 0;
-  else if (roll < 0.65) game.weather = 1;
-  else if (roll < 0.85) game.weather = 2;
-  else game.weather = 3;
+  game.nextWeather = getNextWeather();
+  game.forecast = forecast(game.nextWeather);
 
   draw();
   checkIfOver();
+  saveGame();
 }
 
 function checkIfOver() {
-  var title = "", text = "";
-
-  if (game.health <= 0) {
-    title = "The land is gone.";
-    text = "On day " + game.day + " the soil finally gave out. Nothing will grow here again.";
-  } else if (game.food <= 0) {
-    title = "There is no food left.";
-    text = "You made it to day " + game.day + ", but hunger got there first.";
-  } else if (game.water <= 0) {
-    title = "The water is gone.";
-    text = "Day " + game.day + ". The last drop dried up under that hot sun.";
-  } else if (game.day > game.lastDay) {
-    title = "Day 30 - The Last Harvest.";
-    if (game.health >= 50) text = "You made it, and you left the land better than you found it.";
-    else if (game.health >= 20) text = "You made it, barely. The land is scarred but still alive.";
-    else text = "You survived, but there is almost nothing left. Was it worth it?";
-  } else {
+  var key = pickEnding();
+  if (!key) {
     return;
   }
 
   game.over = true;
+  clearSave();
+
+  var ending = endings[key];
+
+  var text = ending.text.replace("{day}",game.day);
+  var afterText = ending.afterText + difficultyEnding[game.difficulty];
+
   var finalDay = Math.min(game.day, game.lastDay);
   var points = (finalDay * 5) + (game.health * 3) + (game.harvests * 10) + game.food;
-  get("endTitle").textContent = title;
+
+  get("endTitle").textContent = ending.title;
   get("endText").textContent = text;
+  get("endAfterText").textContent = afterText;
   get("endPoints").textContent = "Score: " + points +
-    "  (day " + finalDay + ", " + game.health + "% land, " + game.harvests + " harvests)";
+    "  (day " + finalDay + ", " + game.health + "% land health, " + game.harvests + " harvests) in " + difficulties[currentDifficulty].title + "mode";
   get("endScreen").classList.remove("hide");
 }
 
@@ -339,7 +611,8 @@ function plotInside(p) {
   if (p.dead) return cropArt.dead;
   if (!p.crop) return "";
   var c = crops[p.crop];
-  var size = p.ready ? 1 : keepBetween(p.grown / c.days, 0.3, 0.92);
+  var growthDays = growthRate(p,p.crop)
+  var size = p.ready ? 1 : keepBetween(p.grown / growthDays, 0.3, 0.92);
   var picture = (size < 0.45 && !p.ready) ? cropArt.sprout : c.art;
   var faded = (p.thirsty >= 2 && !p.ready) ? "opacity:.5;" : "";
   return '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;' +
@@ -355,9 +628,53 @@ function drawField() {
     else if (p.ready) classes += " ready";
     else if (p.crop && p.thirsty >= 2) classes += " warn";
     if (game.picked === i) classes += " picked";
-    html += '<div class="' + classes + '" onclick="pickPlot(' + i + ')">' + plotInside(p) + '</div>';
+    if (p.soilBonus > 0) classes += " fertile";
+    if (p.soilBonus < 0) classes += " depleted";
+
+    var toolTip = plotToolTip(p, i);
+    html += `<div class="${classes}" onclick="pickPlot(${i})" title="${toolTip}">${plotInside(p)}</div>`;
   }
   get("field").innerHTML = html;
+}
+
+function plotToolTip(p, i) {
+  var result = [];
+
+  result.push(`Plot ${i+1}`);
+
+  if (p.dead) {
+    result.push("Dead");
+    if (p.lastCrop) {
+      result.push(`Last grown: ${crops[p.lastCrop].title} , planting it again gives debuffs`);
+    }
+    result.push("Click to clear");
+  }
+  else if (!p.crop){
+    result.push("Empty");
+    if (p.lastCrop) {
+      result.push(`Last grown: ${crops[p.lastCrop].title} , planting it again gives debuffs`);
+    }
+    result.push("Click to plant");
+  }
+  else {
+    result.push(`${crops[p.crop].label} growth: ${p.grown}/${growthRate(p,p.crop)}`);
+
+    if (p.ready) {
+      result.push("Click to harvest");
+    }
+    else {
+      result.push(`Water: ${3 - p.thirsty}`);
+    }
+
+    if (p.soilBonus > 0) {
+      result.push(`Soil is fertile (+ ${p.soilBonus} )`);
+    }
+    else if (p.soilBonus < 0) {
+      result.push(`Soil is depleted ( ${p.soilBonus} )`);
+    }
+  }
+
+  return result.join("\n");
 }
 
 function choiceRow(call, art, label, plus, minus, disabled) {
@@ -428,11 +745,35 @@ function drawChoices() {
       if (c3.seedBack) gain2 += ", +" + c3.seedBack + " seeds";
       gain2 += ")";
       html += choiceRow("harvestPlot(" + i + ")", c3.art, "Harvest " + c3.label,
-                        gain2, "-" + harvestDamage(p.crop) + "% land health");
+                        gain2, "-" + RotationDamage(p, p.crop) + "% land health");
     }
   }
 
   get("choices").innerHTML = html;
+  var firstBtn = get("choices").querySelector(".choice:not(:disabled)");
+  if (firstBtn){
+    firstBtn.classList.add("primary");
+  }
+}
+
+function drawDifficultySelector() {
+  var html = "";
+  for (var key in difficulties){
+    var d = difficulties[key];
+    var active = key === currentDifficulty ? "active" : "";
+    html += `<button class="difficultyBtn ${active}" data-key="${key}">${d.title}</button>`
+  }
+
+  get("difficultyRow").innerHTML = html;
+  get("difficultySubtitle").textContent = difficulties[currentDifficulty].subtitle;
+
+  var btns = get("difficultyRow").querySelectorAll(".difficultyBtn");
+  for (var btn of btns){
+    btn.addEventListener("click", function () {
+      currentDifficulty = this.getAttribute("data-key");
+      drawDifficultySelector();
+    })
+  }
 }
 
 function drawPrompt() {
@@ -458,16 +799,44 @@ function draw() {
   get("daysLeft").textContent = Math.max(0, game.lastDay - game.day + 1);
   get("timeName").textContent = timeNames[(game.day - 1) % 4];
   get("weatherName").textContent = weathers[game.weather].name;
+  get("nextWeatherName").textContent = weathers[game.forecast].name + "?";
 
   var belt = "";
   for (var key in tools) {
-    belt += '<span class="' + (game.has[key] ? "have" : "") + '" title="' + tools[key].label + '">' + tools[key].pic + "</span>";
+    belt += '<span class="' + (game.has[key] ? "have" : "") + '" title="' + toolToolTip(key) + '">' + tools[key].pic + "</span>";
   }
   get("toolbelt").innerHTML = belt;
 
   drawField();
   drawChoices();
   drawPrompt();
+}
+
+function toolToolTip(key) {
+  var result = [];
+
+  result.push(tools[key].title);
+
+  if (game.has[key]) {
+    result.push("Built");
+    result.push(tools[key].info);
+  }
+  else {
+    result.push(tools[key].info);
+    result.push(`Cost: ${tools[key].costFood} Food, ${tools[key].costSeeds} Seeds`);
+
+    if (tools[key].costFood > game.food) {
+      result.push("Not enought Food")
+    }
+    if (tools[key].costSeeds > game.seeds) {
+      result.push("Not enough Seeds");
+    }
+    if (tools[key].costFood <= game.food && tools[key].costSeeds <= game.seeds){
+      result.push("Click on the choice panel to build");
+    }
+  }
+
+  return result.join("\n");
 }
 
 var canvas = get("scene");
@@ -497,9 +866,10 @@ function drawScene() {
   var weather = weathers[game.weather];
   var timeNow = timeNames[(game.day - 1) % 4];
 
+  var health = game.health;
   var stripe = 84 / sky.bands.length;
   for (var i = 0; i < sky.bands.length; i++) {
-    pen.fillStyle = sky.bands[i];
+    pen.fillStyle = sampleGradient(sky,"bands",i,health);
     pen.fillRect(0, i * stripe, W, stripe + 1);
   }
 
@@ -512,8 +882,8 @@ function drawScene() {
     }
   }
 
-  pixelBall(160, 82, 16, sky.glow);
-  pixelBall(160, 82, 12, sky.sun);
+  pixelBall(160, 82, 16, sampleGradient(sky, "glow", null, health));
+  pixelBall(160, 82, 12, sampleGradient(sky, "sun", null, health));
 
   pen.fillStyle = sky.stars ? "#241a3d" : "#8a3355";
   for (var cl = 0; cl < 12; cl++) {
@@ -531,10 +901,10 @@ function drawScene() {
     pen.fillRect(tx, 88 - th, tw, th);
   }
 
-  pen.fillStyle = "#6b4530"; pen.fillRect(0, 88, W, 26);
-  pen.fillStyle = "#5c3a28"; pen.fillRect(0, 114, W, 26);
-  pen.fillStyle = "#472c20"; pen.fillRect(0, 140, W, 24);
-  pen.fillStyle = "#301d16"; pen.fillRect(0, 164, W, H - 164);
+  pen.fillStyle = sampleGradient(null, "soil", 0, health); pen.fillRect(0, 88, W, 26);
+  pen.fillStyle = sampleGradient(null, "soil", 1, health); pen.fillRect(0, 114, W, 26);
+  pen.fillStyle = sampleGradient(null, "soil", 2, health); pen.fillRect(0, 140, W, 24);
+  pen.fillStyle = sampleGradient(null, "soil", 3, health); pen.fillRect(0, 164, W, H - 164);
 
   pen.fillStyle = "#3d2419";
   for (var k = 0; k < 34; k++) {
@@ -604,7 +974,7 @@ function drawScene() {
   }
 
   if (weather.name === "Dust") {
-    pen.fillStyle = "rgba(180,130,80,0.16)";
+    pen.fillStyle = "rgba(180, 130, 80, 0.15)";
     pen.fillRect(0, 0, W, H);
   }
 }
@@ -619,11 +989,217 @@ function loop(t) {
 requestAnimationFrame(loop);
 
 function toggleRules() { get("rules").classList.toggle("open"); }
-function startGame() { get("menu").classList.add("hide"); }
+function startGame(){
+  clearSave();
+  resetGame();
+  get("menu").classList.add("hide"); 
+  draw();
+  addLog("Day 1. The soil is tired.", "warn");
+}
 function restart() {
+  clearSave();
   resetGame();
   get("endScreen").classList.add("hide");
+  addLog("Day 1. The soil is tired.", "warn");
   draw();
 }
 
 draw();
+drawDifficultySelector();
+
+function addLog(text, type){
+  game.logs.push({day: game.day, text: text, type: type ? type : ""});
+  drawLog();
+}
+
+function drawLog(){
+  var html = ``
+  for (var i = game.logs.length - 1 ; i >= 0; i--){
+    html += `
+      <div class="log ${game.logs[i].type}">
+        <span class="d">${game.logs[i].day}</span> ${game.logs[i].text}
+      </div>
+    `
+  }
+  get("logs").innerHTML = html
+}
+
+var saveKey = "v1"
+
+function saveGame(){
+  if (!game || game.over){
+    return;
+  }
+  else {
+    try {
+      game.saveTime = Date.now();
+      localStorage.setItem(saveKey, JSON.stringify(game));
+    }
+    catch(e){
+      console.warn("cannot save game "+e);
+    }
+  }
+}
+
+function loadSave(){
+  try {
+    var jsonData = localStorage.getItem(saveKey);
+    if (!jsonData){
+      return null;
+    }
+    var parsedData = JSON.parse(jsonData); 
+
+    return parsedData;
+  }
+  catch(e){
+    console.warn("cannot load game "+e);
+    return null;
+  }
+}
+
+function clearSave() {
+  localStorage.removeItem(saveKey);
+}
+
+function hasSave() {
+  return localStorage.getItem(saveKey) ? true : false
+}
+
+function continueGame(){
+  var data = loadSave();
+  if (!data){
+    flash("no save found!");
+    return;
+  }
+  game = data;
+  currentDifficulty = game.difficulty;
+  get("menu").classList.add("hide");
+  addLog("Resumed on day " + game.day + ".", "warn");
+  draw();
+}
+
+if (!hasSave()){
+  get("continuebtn").classList.add("hide");
+}
+else {
+  get("continuebtn").classList.remove("hide");
+}
+
+function firstEnabledChoice(){
+  var btns = document.querySelectorAll("#choices .choice");
+  for (var btn of btns){
+    if (!btn.disabled){
+      return btn;
+    }
+  }
+  return null;
+}
+
+function handleKey(e){
+  if (game.over){
+    return;
+  }
+  if (!get("menu").classList.contains("hide")){
+    return;
+  }
+
+  var key = e.key.toLowerCase();
+
+  if (key == "h"){
+    toggleHelp();
+    e.preventDefault();
+    return;
+  }
+
+  
+
+  if (key == "escape"){
+    if (!get("helpScreen").classList.contains("hide")){
+      toggleHelp();
+      e.preventDefault();
+      return;
+    }
+    if (game.picked !== null){
+      game.picked = null;
+      draw();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (!get("helpScreen").classList.contains("hide")){
+    return;
+  }
+
+  if (key >= "1" && key <= "9"){
+    var idx = parseInt(key)-1;
+    if (idx >= 0 && idx < game.plots.length) {
+      pickPlot(idx);
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (key === "enter" || key === " ") {
+    var btn = firstEnabledChoice();
+    if (btn) {
+      btn.click();
+      e.preventDefault();
+    }
+    return;
+  }
+
+  if (!game.picked){
+    if (key == "w"){
+      collectWater();
+      e.preventDefault();
+      return;
+    }
+    if (key == "r"){
+      restField();
+      e.preventDefault();
+      return;
+    }
+    if (key == "t"){
+      tradeForSeeds();
+      e.preventDefault();
+      return;
+    }
+  }
+}
+
+function toggleHelp(){
+  get("helpScreen").classList.toggle("hide");
+}
+
+document.addEventListener("keydown", handleKey);
+
+function getNextWeather(){
+  var roll = Math.random();
+  if (roll < 0.45) {
+    return 0;
+  }
+  if (roll < 0.65){
+    return 1;
+  }
+  if (roll < 0.85){
+    return 2;
+  }
+  return 3;
+}
+
+function forecast(nextWeather) {
+  var roll = Math.random();
+  var forecastAccuracy = difficulties[currentDifficulty].forecastAccuracy;
+  if (roll < forecastAccuracy){
+    return nextWeather
+  }
+  else {
+    while(true){
+      var guess = Math.max(0,Math.min(Math.floor(Math.random()*4)),3);
+      if (guess != nextWeather){
+        return guess;
+      }
+    }
+  }
+}

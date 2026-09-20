@@ -27,7 +27,8 @@
   <div class="box">
     <div class="line"><span class="tag" id="tagDays"></span><b id="daysLeft">30</b></div>
     <div class="line"><span class="tag">◐ Time</span><b id="timeName">Dawn</b></div>
-    <div class="line"><span class="tag">☁ Weather</span><b id="weatherName">Clear</b></div>
+    <div class="line"><span class="tag">☁ Weather</span><b id="weatherName"></b></div>
+    <div class="line"><span class="tag">☁ Tommorow</span><b id="nextWeatherName"></b></div>
   </div>
 
   <div class="box storyBox">
@@ -36,6 +37,11 @@
     You are the last farmer<br>
     on this planet.<br>
     Every harvest costs something.
+  </div>
+
+  <div class="box logBox">
+    <h2>Journal</h2>
+    <div id="logs" class="logList"></div>
   </div>
 </div>
 
@@ -60,8 +66,16 @@
 <div class="cover" id="menu">
   <h1>LAST HARVEST</h1>
   <div class="tagline">The last farmer. The last chance.</div>
+
+  <div class="difficultySelect" id="difficultySelect">
+    <div class="difficultyLabel">Difficulty</div>
+    <div class="difficultyRow" id="difficultyRow"></div>
+    <div class="difficultySubtitle" id="difficultySubtitle"></div>
+  </div>
+
   <div class="menuRow">
     <button class="bigBtn dark" onclick="toggleRules()">How to Play</button>
+    <button class="bigBtn" onclick="continueGame()" id="continuebtn">Continue</button>
     <button class="bigBtn" onclick="startGame()">Start</button>
   </div>
   <div class="rules" id="rules">
@@ -78,9 +92,26 @@
   <div class="endCard">
     <h2 id="endTitle"></h2>
     <p id="endText"></p>
+    <p id="endAfterText"></p>
     <p class="points" id="endPoints"></p>
     <div class="bigBtn" onclick="restart()">Play Again</div>
    </div>
+</div>
+
+<div class="cover hide" id="helpScreen">
+  <div class="endCard">
+    <h2>Keyboard Shortcuts</h2>
+    <p class="keyboard">
+      <b>1-9</b> Select plot<br>
+      <b>Esc</b> Deselect plot<br>
+      <b>Enter</b> Confirm action<br>
+      <b>W</b> Collect water<br>
+      <b>R</b> Rest the field<br>
+      <b>T</b> Trade food<br>
+      <b>H</b> Show this help screen<br>
+    </p>
+    <div class="bigBtn" onclick="toggleHelp()">Close</div>
+  </div>
 </div>
 
 <script src="script.js"></script>
